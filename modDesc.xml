@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8" standalone="no" ?>
+<modDesc descVersion="20">
+   <author>iPeer</author>
+    <title>
+		<en>DemandDelay</en>
+    </title>
+    <description>
+        <en>Displays information regarding currently active and upcoming Great Demands.</en>
+ 	</description>
+    <multiplayer supported="true"/>
+	<iconFilename>store.dds</iconFilename>
+	<version>1.0.0</version>
+	<extraSourceFiles>
+        <sourceFile filename="DemandDisplay.lua" />
+    </extraSourceFiles>
+	<l10n>
+		<text name="hud_title">
+            <en>Upcoming Great Demands</en>
+        </text>
+        <text name="hud_starts">
+            <en>Starts in:</en>
+        </text>
+        <text name="hud_running">
+            <en>RUNNING</en>
+        </text>
+        <text name="hud_day">
+            <en>d</en>
+        </text>
+        <text name="hud_min">
+            <en>m</en>
+        </text>
+        <text name="hud_sec">
+            <en>s</en>
+        </text>
+        <text name="hud_unknown_station">
+            <en>Unknown</en>
+        </text>
+	</l10n>
+</modDesc>
