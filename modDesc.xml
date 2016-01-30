@@ -20,11 +20,20 @@
         <text name="hud_starts">
             <en>Starts in:</en>
         </text>
+        <text name="hud_ends">
+            <en>Ends in:</en>
+        </text>
+        <text name="hud_endsat">
+            <en>Ends:</en>
+        </text>
         <text name="hud_running">
             <en>RUNNING</en>
         </text>
         <text name="hud_day">
             <en>d</en>
+        </text>
+        <text name="hud_hour">
+            <en>h</en>
         </text>
         <text name="hud_min">
             <en>m</en>
@@ -35,5 +44,11 @@
         <text name="hud_unknown_station">
             <en>Unknown</en>
         </text>
+        <text name="DemandDisplay_input_key_combo">
+            <en>Toggle Demands display</en>
+        </text>
 	</l10n>
+    <inputBindings>
+        <input name="DemandDisplay_input_key_combo" category="ONFOOT VEHICLE" key1="KEY_lctrl KEY_g" button="" />
+    </inputBindings>	
 </modDesc>
