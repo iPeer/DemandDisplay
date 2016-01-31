@@ -17,17 +17,8 @@
 		<text name="hud_title">
             <en>Upcoming Great Demands</en>
         </text>
-        <text name="hud_starts">
-            <en>Starts in:</en>
-        </text>
-        <text name="hud_ends">
-            <en>Ends in:</en>
-        </text>
-        <text name="hud_endsat">
-            <en>Ends:</en>
-        </text>
         <text name="hud_running">
-            <en>RUNNING</en>
+            <en>--</en>
         </text>
         <text name="hud_day">
             <en>d</en>
@@ -46,6 +37,27 @@
         </text>
         <text name="DemandDisplay_input_key_combo">
             <en>Toggle Demands display</en>
+        </text>
+        <text name="hud_table_multiplier">
+            <en>Multiplier</en>
+        </text>
+        <text name="hud_table_endsin">
+            <en>Ends</en>
+        </text>
+        <text name="hud_table_startsin">
+            <en>Starts</en>
+        </text>
+        <text name="hud_table_station">
+            <en>Buyer</en>
+        </text>
+        <text name="hud_table_crop">
+            <en>Product</en>
+        </text>
+        <text name="hud_table_hours_ends">
+            <en>H</en>
+        </text>
+        <text name="hud_table_days_ends">
+            <en>D</en>
         </text>
 	</l10n>
     <inputBindings>
