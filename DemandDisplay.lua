@@ -22,12 +22,6 @@ function DemandDisplay.consoleToggleUpdates()
     log("Updated have been "..iif(selfUpdatesEnabled, "enabled", "disabled"));
 end
 
-function DemandDisplay.consoleLuaIsBadinThisGame()
-    log("Both are floored");
-    log("11 Hours: "..math.floor(((660 % 1440) / 60)));
-    log("11 Hours 1 Minute: "..math.floor(((661 % 1440) / 60)));
-end
-
 -- The juicy stuff
 
 function DemandDisplay:loadMap(name) 
@@ -35,10 +29,9 @@ function DemandDisplay:loadMap(name)
     
     -- You can edit these values to tweak how it will render in game
     
-    self.overlayWidth = 0.40; -- Width of the entire overlay
-    self.guiPosY = (g_currentMission.weatherTimeBackgroundOverlay.y - g_currentMission.weatherTimeBackgroundOverlay.height) - 0.03; -- DEFAULT Y position of the GUI, changed depending on if the clock is hidden or not -- this is ADDED TO the offset if the clock is visible
+    self.guiPosY = (g_currentMission.weatherTimeBackgroundOverlay.y - g_currentMission.weatherTimeBackgroundOverlay.height) - 0.003; -- DEFAULT Y position of the GUI, changed depending on if the clock is hidden or not
     self.guiColumnMargin = 0.01; -- MINIMUM margin between each "column" of data
-    self.guiMinOffsetRight = 0.02; -- MINIMUM offset from the right edge of the screen
+    self.guiMinOffsetRight = 0.01; -- MINIMUM offset from the right edge of the screen
     self.guiMinRowMarginBottom = 0.01; -- MINIMUM gap between each row of data
     
     -- Changing the following might break some layout stuff (but you can if you want!)
@@ -47,20 +40,37 @@ function DemandDisplay:loadMap(name)
 
     
     -- DO NOT EDIT BELOW THIS LINE
-    
-    --self.totalGUIRowWidth = 0.4 + 0.12 + 0.03; -- Apparently hard-coding is the only way I can do this (for now?)
-    --self.totalGUIRowWidth = self.stationNameWidth + self.cropNameWidth + (self.startsTimeWidth * 2) + self.multiplierWidth + (self.guiColumnMargin * 4);
-    
-    --self.totalGUIRowWidth = (self.stationNameWidth + self.cropNameWidth + (self.startsTimeWidth * 2.0) + self.multiplierWidth) * (self.guiColumnMargin * 4.0) + self.guiMinOffsetRight;
-    
-    log(self.totalGUIRowWidth);
+
     
     self.guiPosX = 1.0 - self.guiMinOffsetRight;
-    --math.abs(0.5 - (self.totalGUIRowWidth / 2));
     
     self.maxWarpUpdate = 120; -- Max warp time to run updates on, stops flooding updates when using mods like fastForward to warp
     self.maxFramesWithoutUpdate = 120; -- Max number of frames we can not update for
     self.visible = true;
+    
+    loadFruitTypes();
+    
+end
+
+function loadFruitTypes() 
+    
+    log("loading fruit types...");
+    dd_fillTypes = {};
+    log("----------------");
+    for a=1, Fillable.NUM_FILLTYPES do
+    
+        local fruit = Fillable.fillTypeIndexToDesc[a];
+        
+        local name = fruit.nameI18N;
+        if fruit.partOfEconomy or a == Fillable.FILLTYPE_SILAGE then -- LUA, Y U NO HAVE CONTINUE
+            log(tostring(a)..": "..name);
+            dd_fillTypes[a] = name;
+        else
+            log(string.format("Fruit Type '%s' (%d) ignored (not sellable to stations)", name, a));
+        end
+        
+    end
+    log("----------------");
     
 end
 
@@ -81,8 +91,6 @@ function DemandDisplay:getGreatDemands()
     
     local economy = g_currentMission.economyManager;
     
-    --if economy == nil then log("economy == nil"); end
-    
     if economy ~= nil then
         
         local numDemands = economy.numberOfConcurrentDemands;
@@ -95,36 +103,27 @@ function DemandDisplay:getGreatDemands()
         self.stationMaxWidth = 0.0;
         self.cropMaxWidth = getTextWidth(self.textScale, g_i18n:getText("hud_table_crop"));
         
-        --log("Number of demands: "..numDemands);
-        
         for a=1, numDemands do
             
             local demand = {};
             local cDemand = economy.greatDemands[a];
             demand.isRunning = cDemand.isRunning;
             demand.multiplier = cDemand.demandMultiplier;
-            --log("M: "..demand.multiplier.."/"..cDemand.demandMultiplier);
             demand.crop = getCropName(cDemand.fillTypeIndex);
-            local cropWidth = getTextWidth(self.textScale, getCropName(demand.crop));
+            local cropWidth = getTextWidth(self.textScale, demand.crop);
             if cropWidth > self.cropMaxWidth then self.cropMaxWidth = cropWidth end;
-            --log("C: "..demand.crop.."/"..cDemand.fillTypeIndex);
             demand.startDay = cDemand.demandStart.day;
             demand.startHour = cDemand.demandStart.hour;
             demand.duration = cDemand.demandDuration;
-            --demand.end = demand.startHour + demand.duration;
-            -- TODO: Check if station is actually valid?
             demand.station = getStationName(cDemand.stationName);
 
             local stationWidth = getTextWidth(self.textScale, getStationName(demand.station));
-            log(getStationName(demand.station).." / "..stationWidth.." vs "..self.stationMaxWidth.." / "..tostring((stationWidth > self.stationMaxWidth)));
             if stationWidth > self.stationMaxWidth then self.stationMaxWidth = stationWidth end
             demand.valid = cDemand.isValid;
             
             demandData[a] = demand;
             
         end
-        
-        --log(self.multiplierMaxWidth.." / "..self.startTimerMaxWidth.." / "..self.endDateMaxWidth.." / "..self.stationMaxWidth.." / "..self.cropMaxWidth);
         
         return demandData;
         
@@ -135,10 +134,8 @@ function DemandDisplay:getGreatDemands()
 end
 
 function DemandDisplay:update(dt)
-    --log("Update!");
     g_currentMission:addHelpButtonText(g_i18n:getText("DemandDisplay_input_key_combo"), InputBinding.DemandDisplay_input_key_combo);
     if InputBinding.hasEvent(InputBinding.DemandDisplay_input_key_combo) then
-        logDebug("Key combination pressed!");
         if self.visible then
             self.visible = false;
         else
@@ -147,8 +144,6 @@ function DemandDisplay:update(dt)
         log("GUI is now "..iif(self.visible, "visible", "hidden"));
     end        
     if self:shouldUpdate() then
-        --log("Update requested");
-        self.framesSinceUpdate = 0;
         self.demandData = self:getGreatDemands();
     end
     
@@ -156,16 +151,14 @@ end
 
 function DemandDisplay:shouldUpdate()
 
-    --if not self.visible or not self.updatesEnabled or g_gui.currentGui ~= nil then return false end
-    --if g_currentMission.missionStats.timeScale > self.maxWarpUpdate then
-    --    if self.framesSinceUpdate > self.maxFramesWithoutUpdate then return true end
-    --    return false
-    --end
+    if not self.visible or g_gui.currentGui ~= nill then return false end
     return true;
     
 end
 
 function DemandDisplay:draw()
+    
+    if not self:shouldUpdate() then return end
     
     -- Render column titles
     local x = self.guiPosX - self.multiplierMaxWidth;
@@ -196,14 +189,12 @@ function DemandDisplay:draw()
             setTextColor(1, 1, 1, 1); -- white
         end
         setTextAlignment(RenderText.ALIGN_LEFT);
-        --log("x: "..xPos..", y: "..yPos);
         
         -- Rendered "backwards" so we can make sure everything's nice and close to the right side without cutoff
         xPos = xPos - self.multiplierMaxWidth;
-        --log(getTextWidth(self.textScale, demand.multiplier.."x"));
         renderText(xPos, yPos, self.textScale, string.format("%.1f", demand.multiplier).."x");
         xPos = xPos - (iif(demandisActive, self.startTimerMaxWidth, self.endDateMaxWidth) + self.guiColumnMargin);
-        --setTextAlignment(RenderText.ALIGN_CENTER);
+
         if demand.isRunning then -- calculating END (right) timer
             
             local running = string.upper(g_i18n:getText("hud_running"));
@@ -211,18 +202,16 @@ function DemandDisplay:draw()
             local remainingTime = ((demand.duration * 60) * 60) + 60;
             local timeData = {createTimeSeconds(seconds)};
             local endTime = (seconds - ((timeData[3] * 60) + timeData[4])) + remainingTime;
-            --local dStartTime = ((((demand.startDay * 24) * 60) * 60) + ((demand.startHour * 60) * 60));
-            --local dEndTime = dStartTime + ((demand.originalDuration * 60) * 60);
             local diff = endTime - seconds;
             
             local endStamp = createTimeStamp({createTimeSeconds(diff)}, true);
             
-            log("Rem: "..remainingTime..", S: "..seconds..", end: "..endTime..", diff: "..diff);
+            --log("Rem: "..remainingTime..", S: "..seconds..", end: "..endTime..", diff: "..diff);
             
             renderText(xPos, yPos, self.textScale, endStamp);
             xPos = xPos - (self.startTimerMaxWidth + self.guiColumnMargin);
             
-            renderText(xPos, yPos, self.textScale, running);
+            --renderText(xPos, yPos, self.textScale, running); -- Empty data looks better than "RUNNING"
             xPos = xPos - (self.stationMaxWidth + self.guiColumnMargin);
             
         else -- calculating START (left) timer
@@ -244,7 +233,6 @@ function DemandDisplay:draw()
             xPos = xPos - (self.stationMaxWidth + self.guiColumnMargin);
             
         end
-        --setTextAlignment(RenderText.ALIGN_LEFT);
         
         renderText(xPos, yPos, self.textScale, demand.station);
         xPos = xPos - (self.cropMaxWidth + self.guiColumnMargin);
@@ -272,7 +260,6 @@ function getGameTimeSeconds()
 end
     
 function createTimeStamp(data, forceMins) 
-        --logDebug(data);
         local time = "";
         if forceMins or data[3] > 0 then
             time = tostring(data[3])..g_i18n:getText("hud_min");
@@ -312,20 +299,22 @@ function createTime(minutes)
     
 end
 
-function getStationName(name) -- TODO
+function getStationName(name)
+    if g_i18n:hasText(name) then
+        return g_i18n:getText(name);
+    end
     return name;
 end
 
 function getCropName(id) -- TODO
-    return tostring(id);
+    if dd_fillTypes[id] ~= nil then
+        return dd_fillTypes[id];
+    end
+    return "Unknown product id: "..tostring(id)
 end
 
 function log(str)
     print("[DemandDisplay]: "..tostring(str));
-end
-
-function logDebug(str)
-    log("(DEBUG) "..tostring(str));
 end
 
 function iif(c,t,f)
@@ -335,7 +324,6 @@ end
 addConsoleCommand("dd_getcurrentwarp", "", "consoleDisplayWarp", DemandDisplay);
 addConsoleCommand("dd_disableupdates", "", "consoleToggleUpdates", DemandDisplay);
 addConsoleCommand("dd_displayfirstgdend", "", "consoleDisplayFirstDemandDuration", DemandDisplay);
-addConsoleCommand("dd_11hours", "", "consoleLuaIsBadinThisGame", DemandDisplay);
 
 -- Hook for events
 addModEventListener(DemandDisplay);

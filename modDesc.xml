@@ -18,7 +18,7 @@
             <en>Upcoming Great Demands</en>
         </text>
         <text name="hud_running">
-            <en>--</en>
+            <en>--** NOT USED **--</en>
         </text>
         <text name="hud_day">
             <en>d</en>
