@@ -29,7 +29,7 @@ function DemandDisplay:loadMap(name)
     
     -- You can edit these values to tweak how it will render in game
     
-    self.guiPosY = (g_currentMission.weatherTimeBackgroundOverlay.y - g_currentMission.weatherTimeBackgroundOverlay.height) - 0.003; -- DEFAULT Y position of the GUI, changed depending on if the clock is hidden or not
+    self.guiPosY = (g_currentMission.weatherTimeBackgroundOverlay.y - g_currentMission.weatherTimeBackgroundOverlay.height) + 0.015; -- DEFAULT Y position of the GUI, changed depending on if the clock is hidden or not
     self.guiColumnMargin = 0.01; -- MINIMUM margin between each "column" of data
     self.guiMinOffsetRight = 0.01; -- MINIMUM offset from the right edge of the screen
     self.guiMinRowMarginBottom = 0.01; -- MINIMUM gap between each row of data
@@ -96,6 +96,8 @@ function DemandDisplay:getGreatDemands()
         local numDemands = economy.numberOfConcurrentDemands;
         local demandData = {};
         
+        setTextBold(true);
+        
         self.multiplierMaxWidth = getTextWidth(self.textScale, g_i18n:getText("hud_table_multiplier"));
         self.startTimerMaxWidth = getTextWidth(self.textScale, "10"..g_i18n:getText("hud_day").."23"..g_i18n:getText("hud_hour").."59"..g_i18n:getText("hud_min"));
         self.endDateMaxWidth = getTextWidth(self.textScale, g_i18n:getText("hud_table_days_ends").."999"..g_i18n:getText("hud_table_hours_ends").."23");
@@ -110,6 +112,7 @@ function DemandDisplay:getGreatDemands()
             demand.isRunning = cDemand.isRunning;
             demand.multiplier = cDemand.demandMultiplier;
             demand.crop = getCropName(cDemand.fillTypeIndex);
+        
             local cropWidth = getTextWidth(self.textScale, demand.crop);
             if cropWidth > self.cropMaxWidth then self.cropMaxWidth = cropWidth end;
             demand.startDay = cDemand.demandStart.day;
@@ -124,6 +127,8 @@ function DemandDisplay:getGreatDemands()
             demandData[a] = demand;
             
         end
+        
+        setTextBold(false);
         
         return demandData;
         
@@ -183,22 +188,17 @@ function DemandDisplay:draw()
         local xPos = self.guiPosX;
         local yPos = self.guiPosY - ((self.textScale + self.guiMinRowMarginBottom) * i);
         
-        if demand.isRunning then
-            setTextColor(0, 1, 0, 1); -- green
-        else
-            setTextColor(1, 1, 1, 1); -- white
-        end
         setTextAlignment(RenderText.ALIGN_LEFT);
         
-        -- Rendered "backwards" so we can make sure everything's nice and close to the right side without cutoff
-        xPos = xPos - self.multiplierMaxWidth;
-        renderText(xPos, yPos, self.textScale, string.format("%.1f", demand.multiplier).."x");
-        xPos = xPos - (iif(demandisActive, self.startTimerMaxWidth, self.endDateMaxWidth) + self.guiColumnMargin);
-
+        local demandEnd = "--";
+        local demandStart = "--";
+        
         if demand.isRunning then -- calculating END (right) timer
             
-            local running = string.upper(g_i18n:getText("hud_running"));
+            setTextBold(true);
+            
             local seconds = getGameTimeSeconds();
+            local startTime = (((demand.startDay * 24) * 60) * 60) + ((demand.startHour * 60) * 60);
             local remainingTime = ((demand.duration * 60) * 60) + 60;
             local timeData = {createTimeSeconds(seconds)};
             local endTime = (seconds - ((timeData[3] * 60) + timeData[4])) + remainingTime;
@@ -206,15 +206,39 @@ function DemandDisplay:draw()
             
             local endStamp = createTimeStamp({createTimeSeconds(diff)}, true);
             
-            --log("Rem: "..remainingTime..", S: "..seconds..", end: "..endTime..", diff: "..diff);
+            demandEnd = endStamp;
+
+            -- Calculate how red-shifted the text should be
             
-            renderText(xPos, yPos, self.textScale, endStamp);
-            xPos = xPos - (self.startTimerMaxWidth + self.guiColumnMargin);
+            local maxDiff = endTime - startTime;
+            local colourDec = 1.0 / maxDiff; -- how much to change each colour by per number
+            --local changesPerColour = 1.0 / colourDec; -- How many changes, per colour, can there be
             
-            --renderText(xPos, yPos, self.textScale, running); -- Empty data looks better than "RUNNING"
-            xPos = xPos - (self.stationMaxWidth + self.guiColumnMargin);
+            local currDiff = maxDiff - diff; -- Current difference;
+            local changeFactor = (colourDec * currDiff) * 2; -- Calculate how much we change a colour by - We have to double it for reasons I don't understand.
+            local colourR, colourG, colourB = changeFactor, 1, 0;
+            
+            if colourR > 1.0 then
+                colourG = colourG - (changeFactor - 1.0);
+            end
+            
+            -- Sanity checking
+            
+            if colourR > 1.0 then colourR = 1.0 end
+            if colourG > 1.0 then colourG = 1.0 end
+            if colourB > 1.0 then colourB = 1.0 end
+            
+            if colourR < 0.0 then colourR = 0.0 end
+            if colourG < 0.0 then colourG = 0.0 end
+            if colourB < 0.0 then colourB = 0.0 end
+            
+            setTextColor(colourR, colourG, colourB, 1);
+            
+            
             
         else -- calculating START (left) timer
+            
+            setTextBold(false);
             
             local minutes = getGameTimeMinutes();
             local startTime = ((demand.startDay * 24) * 60) + (demand.startHour * 60);
@@ -226,10 +250,34 @@ function DemandDisplay:draw()
             local _startTime = createTimeStamp({createTime(diff)}, true);
             local _endTime = createEndTimestamp({createTime(endTime)});
             
-            renderText(xPos, yPos, self.textScale, _endTime);
+            demandStart = _startTime;
+            demandEnd = _endTime;
+            
+            setTextColor(1, 1, 1, 1);
+            
+        end
+        
+        -- Rendered "backwards" so we can make sure everything's nice and close to the right side without cutoff
+        xPos = xPos - self.multiplierMaxWidth;
+        renderText(xPos, yPos, self.textScale, string.format("%.1f", demand.multiplier).."x");
+        xPos = xPos - (iif(demandisActive, self.startTimerMaxWidth, self.endDateMaxWidth) + self.guiColumnMargin);
+        
+        -- Countdown timers
+        
+        if demand.isRunning then
+            
+            renderText(xPos, yPos, self.textScale, demandEnd);
             xPos = xPos - (self.startTimerMaxWidth + self.guiColumnMargin);
             
-            renderText(xPos, yPos, self.textScale, _startTime);
+            --renderText(xPos, yPos, self.textScale, running); -- Empty data looks better than "RUNNING"
+            xPos = xPos - (self.stationMaxWidth + self.guiColumnMargin);
+            
+        else
+            
+            renderText(xPos, yPos, self.textScale, demandEnd);
+            xPos = xPos - (self.startTimerMaxWidth + self.guiColumnMargin);
+            
+            renderText(xPos, yPos, self.textScale, demandStart);
             xPos = xPos - (self.stationMaxWidth + self.guiColumnMargin);
             
         end
